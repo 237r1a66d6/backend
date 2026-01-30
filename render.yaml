@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: saira-acad-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        value: SAIRA_ACAD_2026_SECURE_JWT_KEY_CHANGE_THIS_PRODUCTION
