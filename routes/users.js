@@ -113,7 +113,7 @@ router.post('/register', [
 // @desc    Login user
 // @access  Public
 router.post('/login', [
-    body('email').isEmail().withMessage('Valid email is required'),
+    body('fullName').trim().notEmpty().withMessage('Full name is required'),
     body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
     try {
@@ -125,10 +125,16 @@ router.post('/login', [
             });
         }
 
-        const { email, password } = req.body;
+        const { fullName, password } = req.body;
 
-        // Find user
-        const user = await User.findOne({ where: { email: email.toLowerCase() } });
+        // Find user by fullName (case-insensitive)
+        const { sequelize } = require('../config/database');
+        const user = await User.findOne({ 
+            where: sequelize.where(
+                sequelize.fn('lower', sequelize.col('fullName')), 
+                fullName.toLowerCase()
+            ) 
+        });
         if (!user) {
             return res.status(400).json({ 
                 success: false, 
