@@ -28,7 +28,7 @@ router.post('/register', [
         const { fullName, phoneNumber, qualification, email, password } = req.body;
 
         // Check if user already exists
-        let user = await User.findOne({ email: email.toLowerCase() });
+        let user = await User.findOne({ where: { email: email.toLowerCase() } });
         if (user) {
             return res.status(400).json({ 
                 success: false, 
@@ -36,8 +36,14 @@ router.post('/register', [
             });
         }
 
-        // Check if username is taken
-        user = await User.findOne({ fullName: { $regex: new RegExp(`^${fullName}$`, 'i') } });
+        // Check if username is taken  
+        const { sequelize } = require('../config/database');
+        user = await User.findOne({ 
+            where: sequelize.where(
+                sequelize.fn('lower', sequelize.col('fullName')), 
+                fullName.toLowerCase()
+            ) 
+        });
         if (user) {
             return res.status(400).json({ 
                 success: false, 
@@ -80,7 +86,7 @@ router.post('/register', [
                     message: 'Registration successful!',
                     token,
                     user: {
-                        id: user._id,
+                        id: user.id,
                         fullName: user.fullName,
                         email: user.email,
                         phoneNumber: user.phoneNumber,
@@ -122,7 +128,7 @@ router.post('/login', [
         const { email, password } = req.body;
 
         // Find user
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const user = await User.findOne({ where: { email: email.toLowerCase() } });
         if (!user) {
             return res.status(400).json({ 
                 success: false, 
@@ -167,7 +173,7 @@ router.post('/login', [
                     message: 'Login successful!',
                     token,
                     user: {
-                        id: user._id,
+                        id: user.id,
                         fullName: user.fullName,
                         email: user.email,
                         phoneNumber: user.phoneNumber,
