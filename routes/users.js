@@ -126,7 +126,7 @@ router.post('/login', [
         }
 
         const { identifier, password } = req.body;
-        const { sequelize, Op } = require('sequelize');
+        const { sequelize } = require('../config/database');
 
         // Check if identifier is an email or fullName
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
