@@ -110,10 +110,10 @@ router.post('/register', [
 });
 
 // @route   POST /api/users/login
-// @desc    Login user
+// @desc    Login user (accepts email or fullName)
 // @access  Public
 router.post('/login', [
-    body('fullName').trim().notEmpty().withMessage('Full name is required'),
+    body('identifier').trim().notEmpty().withMessage('Email or full name is required'),
     body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
     try {
@@ -125,16 +125,31 @@ router.post('/login', [
             });
         }
 
-        const { fullName, password } = req.body;
+        const { identifier, password } = req.body;
+        const { sequelize, Op } = require('sequelize');
 
-        // Find user by fullName (case-insensitive)
-        const { sequelize } = require('../config/database');
-        const user = await User.findOne({ 
-            where: sequelize.where(
-                sequelize.fn('lower', sequelize.col('fullName')), 
-                fullName.toLowerCase()
-            ) 
-        });
+        // Check if identifier is an email or fullName
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+        
+        let user;
+        if (isEmail) {
+            // Find user by email (case-insensitive)
+            user = await User.findOne({ 
+                where: sequelize.where(
+                    sequelize.fn('lower', sequelize.col('email')), 
+                    identifier.toLowerCase()
+                ) 
+            });
+        } else {
+            // Find user by fullName (case-insensitive)
+            user = await User.findOne({ 
+                where: sequelize.where(
+                    sequelize.fn('lower', sequelize.col('fullName')), 
+                    identifier.toLowerCase()
+                ) 
+            });
+        }
+        
         if (!user) {
             return res.status(400).json({ 
                 success: false, 
