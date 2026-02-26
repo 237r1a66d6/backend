@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 const User = require('../models/User');
+const userAuth = require('../middleware/userAuth');
 
 // @route   POST /api/users/register
 // @desc    Register a new user
@@ -208,10 +209,100 @@ router.post('/login', [
     }
 });
 
+// @route   POST /api/users/verify
+// @desc    Verify JWT token and get user data
+// @access  Private
+router.post('/verify', userAuth, async (req, res) => {
+    try {
+        // req.userId is set by userAuth middleware
+        const user = await User.findByPk(req.userId, {
+            attributes: { exclude: ['password'] }
+        });
+
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'User not found' 
+            });
+        }
+
+        if (user.status !== 'active') {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Account is not active' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            user: {
+                id: user.id,
+                fullName: user.fullName,
+                email: user.email,
+                phoneNumber: user.phoneNumber,
+                qualification: user.qualification,
+                registeredDate: user.registeredDate,
+                progress: user.progress,
+                enrolledCourses: user.enrolledCourses,
+                completedCourses: user.completedCourses,
+                inProgressCourses: user.inProgressCourses,
+                status: user.status
+            }
+        });
+    } catch (error) {
+        console.error('Verify token error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error' 
+        });
+    }
+});
+
+// @route   GET /api/users/me
+// @desc    Get current logged-in user's profile
+// @access  Private
+router.get('/me', userAuth, async (req, res) => {
+    try {
+        const user = await User.findByPk(req.userId, {
+            attributes: { exclude: ['password'] }
+        });
+
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'User not found' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            user: {
+                id: user.id,
+                fullName: user.fullName,
+                email: user.email,
+                phoneNumber: user.phoneNumber,
+                qualification: user.qualification,
+                registeredDate: user.registeredDate,
+                progress: user.progress,
+                enrolledCourses: user.enrolledCourses,
+                completedCourses: user.completedCourses,
+                inProgressCourses: user.inProgressCourses,
+                status: user.status
+            }
+        });
+    } catch (error) {
+        console.error('Get current user error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error' 
+        });
+    }
+});
+
 // @route   GET /api/users/profile/:id
 // @desc    Get user profile
-// @access  Private (add auth middleware in production)
-router.get('/profile/:id', async (req, res) => {
+// @access  Private
+router.get('/profile/:id', userAuth, async (req, res) => {
     try {
         const user = await User.findByPk(req.params.id, {
             attributes: { exclude: ['password'] }
@@ -235,8 +326,16 @@ router.get('/profile/:id', async (req, res) => {
 // @route   PUT /api/users/profile/:id
 // @desc    Update user profile
 // @access  Private
-router.put('/profile/:id', async (req, res) => {
+router.put('/profile/:id', userAuth, async (req, res) => {
     try {
+        // Ensure user can only update their own profile
+        if (req.userId !== parseInt(req.params.id)) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Unauthorized to update this profile' 
+            });
+        }
+
         const { fullName, phoneNumber, qualification } = req.body;
         
         const user = await User.findByPk(req.params.id);

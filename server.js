@@ -71,8 +71,10 @@ app.get('/', (req, res) => {
             users: {
                 register: 'POST /api/users/register',
                 login: 'POST /api/users/login',
-                profile: 'GET /api/users/profile/:id',
-                updateProfile: 'PUT /api/users/profile/:id'
+                verify: 'POST /api/users/verify (Protected)',
+                getCurrentUser: 'GET /api/users/me (Protected)',
+                profile: 'GET /api/users/profile/:id (Protected)',
+                updateProfile: 'PUT /api/users/profile/:id (Protected)'
             },
             admin: {
                 login: 'POST /api/admin/login',
