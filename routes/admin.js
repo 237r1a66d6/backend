@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
+const { Op } = require('sequelize');
 const Admin = require('../models/Admin');
 const User = require('../models/User');
 const PartnerContact = require('../models/PartnerContact');
@@ -115,13 +116,13 @@ router.post('/admins', adminAuth, [
 
         const { username, password, email, role } = req.body;
 
-        const existing = await Admin.findOne({ username });
+        const existing = await Admin.findOne({ where: { username } });
         if (existing) {
             return res.status(400).json({ success: false, message: 'Admin username already exists' });
         }
 
         if (email) {
-            const emailExists = await Admin.findOne({ email: email.toLowerCase() });
+            const emailExists = await Admin.findOne({ where: { email: email.toLowerCase() } });
             if (emailExists) {
                 return res.status(400).json({ success: false, message: 'Admin email already exists' });
             }
@@ -177,7 +178,7 @@ router.put('/admins/:id', adminAuth, [
         const updates = { ...req.body };
 
         if (updates.username) {
-            const exists = await Admin.findOne({ username: updates.username, _id: { $ne: req.params.id } });
+            const exists = await Admin.findOne({ where: { username: updates.username, id: { [Op.ne]: req.params.id } } });
             if (exists) {
                 return res.status(400).json({ success: false, message: 'Username already in use' });
             }
@@ -185,7 +186,7 @@ router.put('/admins/:id', adminAuth, [
 
         if (updates.email) {
             updates.email = updates.email.toLowerCase();
-            const emailExists = await Admin.findOne({ email: updates.email, _id: { $ne: req.params.id } });
+            const emailExists = await Admin.findOne({ where: { email: updates.email, id: { [Op.ne]: req.params.id } } });
             if (emailExists) {
                 return res.status(400).json({ success: false, message: 'Email already in use' });
             }

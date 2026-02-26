@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
+const { Op } = require('sequelize');
 const SchoolPartner = require('../models/SchoolPartner');
 const JobApplication = require('../models/JobApplication');
 const TeacherApplication = require('../models/TeacherApplication');
@@ -126,7 +127,7 @@ router.post('/create', adminAuth, [
         const { schoolName, username, email, password } = req.body;
 
         // Check if username exists
-        let partner = await SchoolPartner.findOne({ username: username.toLowerCase() });
+        let partner = await SchoolPartner.findOne({ where: { username: username.toLowerCase() } });
         if (partner) {
             return res.status(400).json({ 
                 success: false, 
@@ -135,7 +136,7 @@ router.post('/create', adminAuth, [
         }
 
         // Check if email exists
-        partner = await SchoolPartner.findOne({ email: email.toLowerCase() });
+        partner = await SchoolPartner.findOne({ where: { email: email.toLowerCase() } });
         if (partner) {
             return res.status(400).json({ 
                 success: false, 
@@ -217,8 +218,10 @@ router.put('/update/:id', adminAuth, async (req, res) => {
         // Check if username is taken by another partner
         if (username && username !== partner.username) {
             const existingPartner = await SchoolPartner.findOne({ 
-                username: username.toLowerCase(),
-                _id: { $ne: req.params.id }
+                where: {
+                    username: username.toLowerCase(),
+                    id: { [Op.ne]: req.params.id }
+                }
             });
             if (existingPartner) {
                 return res.status(400).json({ 
@@ -232,8 +235,10 @@ router.put('/update/:id', adminAuth, async (req, res) => {
         // Check if email is taken by another partner
         if (email && email !== partner.email) {
             const existingPartner = await SchoolPartner.findOne({ 
-                email: email.toLowerCase(),
-                _id: { $ne: req.params.id }
+                where: {
+                    email: email.toLowerCase(),
+                    id: { [Op.ne]: req.params.id }
+                }
             });
             if (existingPartner) {
                 return res.status(400).json({ 

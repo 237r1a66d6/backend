@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
+const { Op } = require('sequelize');
 const User = require('../models/User');
 
 // @route   POST /api/users/register
@@ -28,7 +29,7 @@ router.post('/register', [
         const { fullName, phoneNumber, qualification, email, password } = req.body;
 
         // Check if user already exists
-        let user = await User.findOne({ email: email.toLowerCase() });
+        let user = await User.findOne({ where: { email: email.toLowerCase() } });
         if (user) {
             return res.status(400).json({ 
                 success: false, 
@@ -37,7 +38,7 @@ router.post('/register', [
         }
 
         // Check if username is taken
-        user = await User.findOne({ fullName: { $regex: new RegExp(`^${fullName}$`, 'i') } });
+        user = await User.findOne({ where: { fullName: { [Op.like]: fullName } } });
         if (user) {
             return res.status(400).json({ 
                 success: false, 
@@ -122,7 +123,7 @@ router.post('/login', [
         const { email, password } = req.body;
 
         // Find user
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const user = await User.findOne({ where: { email: email.toLowerCase() } });
         if (!user) {
             return res.status(400).json({ 
                 success: false, 
