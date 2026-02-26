@@ -38,7 +38,13 @@ router.post('/login', [
         }
 
         // Verify password
-        const isMatch = await bcrypt.compare(password, admin.password);
+        // PHP bcrypt compatibility: convert $2y$ to $2b$
+        let hash = admin.password;
+        if (hash.startsWith("$2y$")) {
+            hash = "$2b$" + hash.slice(4);
+        }
+        
+        const isMatch = await bcrypt.compare(password, hash);
         if (!isMatch) {
             return res.status(400).json({ 
                 success: false, 
@@ -58,7 +64,7 @@ router.post('/login', [
         jwt.sign(
             payload,
             process.env.JWT_SECRET,
-            { expiresIn: '24h' },
+            { expiresIn: '30d' },
             (err, token) => {
                 if (err) throw err;
                 res.json({
