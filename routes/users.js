@@ -81,7 +81,7 @@ router.post('/register', [
                     message: 'Registration successful!',
                     token,
                     user: {
-                        id: user._id,
+                        id: user.id,
                         fullName: user.fullName,
                         email: user.email,
                         phoneNumber: user.phoneNumber,
@@ -122,17 +122,24 @@ router.post('/login', [
 
         const { email, password } = req.body;
 
+        console.log(`🔐 Login attempt for email: ${email}`);
+
         // Find user
         const user = await User.findOne({ where: { email: email.toLowerCase() } });
         if (!user) {
+            console.log(`❌ User not found: ${email}`);
             return res.status(400).json({ 
                 success: false, 
                 message: 'Invalid credentials' 
             });
         }
 
+        console.log(`✅ User found - ID: ${user.id}, Name: ${user.fullName}`);
+        console.log(`📝 Password hash prefix: ${user.password ? user.password.substring(0, 7) : 'null'}`);
+
         // Check if account is active
         if (user.status !== 'active') {
+            console.log(`⚠️ Account not active: ${user.status}`);
             return res.status(400).json({ 
                 success: false, 
                 message: 'Account is not active. Please contact support.' 
@@ -144,9 +151,12 @@ router.post('/login', [
         let hash = user.password;
         if (hash.startsWith("$2y$")) {
             hash = "$2b$" + hash.slice(4);
+            console.log('🔄 Converted PHP bcrypt $2y$ to $2b$');
         }
         
+        console.log(`🔍 Comparing password...`);
         const isMatch = await bcrypt.compare(password, hash);
+        console.log(`🔐 Password match: ${isMatch}`);
         if (!isMatch) {
             return res.status(400).json({ 
                 success: false, 
@@ -169,12 +179,13 @@ router.post('/login', [
             { expiresIn: '30d' },
             (err, token) => {
                 if (err) throw err;
+                console.log(`✅ Login successful for user ID: ${user.id}`);
                 res.json({
                     success: true,
                     message: 'Login successful!',
                     token,
                     user: {
-                        id: user._id,
+                        id: user.id,
                         fullName: user.fullName,
                         email: user.email,
                         phoneNumber: user.phoneNumber,
