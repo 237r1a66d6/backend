@@ -28,10 +28,22 @@ if (!fs.existsSync(resumesDir)) {
 connectDatabase();
 
 // Middleware
-// CORS Configuration - Allow all origins for production deployment
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:5500', 'http://127.0.0.1:5500'];
+
 app.use(cors({
-    origin: '*', // Allow all origins (required for Render + Hostinger setup)
-    credentials: false,
+    origin: function(origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -40,6 +52,10 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Serve static files from SAIRA directory (HTML, CSS, JS, assets)
+app.use('/SAIRA', express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '..')));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -71,10 +87,8 @@ app.get('/', (req, res) => {
             users: {
                 register: 'POST /api/users/register',
                 login: 'POST /api/users/login',
-                verify: 'POST /api/users/verify (Protected)',
-                getCurrentUser: 'GET /api/users/me (Protected)',
-                profile: 'GET /api/users/profile/:id (Protected)',
-                updateProfile: 'PUT /api/users/profile/:id (Protected)'
+                profile: 'GET /api/users/profile/:id',
+                updateProfile: 'PUT /api/users/profile/:id'
             },
             admin: {
                 login: 'POST /api/admin/login',
@@ -96,8 +110,26 @@ app.get('/', (req, res) => {
     });
 });
 
-// 404 handler
+// Serve index.html for root route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
+// Handle /SAIRA/index route
+app.get('/SAIRA/index', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
+// 404 handler - must be after all other routes
 app.use((req, res) => {
+    // If request is for an HTML file that doesn't have extension, try adding .html
+    if (!path.extname(req.path)) {
+        const htmlPath = path.join(__dirname, '..', req.path + '.html');
+        if (fs.existsSync(htmlPath)) {
+            return res.sendFile(htmlPath);
+        }
+    }
+    
     res.status(404).json({ 
         success: false, 
         message: 'Route not found' 
